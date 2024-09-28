@@ -1,0 +1,13 @@
+# Ignore environment variable files
+.env
+*.env
+
+# Ignore logs folder
+logs/
+
+# Ignore files form 
+basicbot_OLD.py
+cogs/greetings.py
+cmds/
+slashcmds/
+__pycache__/
