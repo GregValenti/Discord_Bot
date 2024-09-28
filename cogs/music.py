@@ -126,7 +126,7 @@ class MusicBot(commands.Cog):
                 await ctx.send(f"Added **{track}** by **{track.author}** to the queue")
 
             if not player.playing:
-                await player.play(player.queue.get(), volume = 25)
+                await player.play(player.queue.get(), volume = 15)
         else:
             return
         

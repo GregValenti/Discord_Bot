@@ -15,6 +15,8 @@ CMDS_DIR = BASE_DIR / "cmds"
 COGS_DIR = BASE_DIR / "cogs"
 
 GUILDS_ID = discord.Object(id=int(os.getenv("GUILD")))
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 LOGGING_CONFIG = {
     "version": 1,

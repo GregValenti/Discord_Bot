@@ -21,16 +21,28 @@ def run():
             raise error
 
     @bot.command()
-    async def load(ctx, cog: str):
+    @commands.is_owner()
+    async def load(ctx: commands.Context, cog: str):
         await bot.load_extension(f"cogs.{cog.lower()}")
 
     @bot.command()
-    async def unload(ctx, cog: str):
+    @commands.is_owner()
+    async def unload(ctx: commands.Context, cog: str):
         await bot.unload_extension(f"cogs.{cog.lower()}")
 
     @bot.command()
-    async def reload(ctx, cog: str):
+    @commands.is_owner()
+    async def reload(ctx: commands.Context, cog: str):
         await bot.reload_extension(f"cogs.{cog.lower()}")
+
+    @bot.event
+    async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
+        if isinstance(error, commands.CommandNotFound):
+            await ctx.send(f"Command **{ctx.invoked_with}** not found. Use **help** for more information.")
+        elif isinstance(error, commands.NotOwner):
+            await ctx.send("You do not have permission to use this command.")
+        else:
+            raise error
 
     bot.run(settings.DISCORD_API_TOKEN, root_logger=True)
 
