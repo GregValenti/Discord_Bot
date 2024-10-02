@@ -4,6 +4,7 @@ import logging
 from logging.config import dictConfig
 from dotenv import load_dotenv
 import discord
+import json
 
 load_dotenv()
 
@@ -17,6 +18,20 @@ COGS_DIR = BASE_DIR / "cogs"
 GUILDS_ID = discord.Object(id=int(os.getenv("GUILD")))
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+PLAYLISTS_PATH = BASE_DIR / "playlists.json"
+
+def load_playlists():
+    if os.path.exists(PLAYLISTS_PATH):
+        with open("playlists.json", 'r') as f:
+            playlists = json.load(f)
+        return playlists 
+
+def save_playlists(playlists):
+    with open("playlists.json", 'w') as f:
+        json.dump(playlists, f, indent=4)
+
+playlists = load_playlists()
 
 LOGGING_CONFIG = {
     "version": 1,

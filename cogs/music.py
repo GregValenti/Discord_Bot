@@ -1,19 +1,19 @@
 import asyncio
 import logging
 from typing import cast
+import json
+import os
 
 import wavelink.player
 import settings
+from settings import load_playlists, save_playlists
+from utils.pagination import PaginationView, format_duration, create_green_embed, create_red_embed
 
 import discord
 from discord.ext import commands
 import wavelink
 
 logger = settings.logging.getLogger(__name__)
-
-def format_duration(duration: int) -> str:
-    minutes, seconds = divmod(duration // 1000, 60)
-    return f"{minutes}:{seconds:02d}"  
 
 # ==================== Class Definition ==================== # 
 
@@ -44,15 +44,16 @@ class MusicBot(commands.Cog):
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload) -> None:
         player: wavelink.Player | None = payload.player
         if not player:
-            # TODO - Handle edge cases
+            # This is handled in other functions
             return 
         
         original: wavelink.Playable | None = payload.original
         track: wavelink.Playable = payload.track
 
-        embed: discord.Embed = discord.Embed(title = "Now Playing:")
-        embed.description = f"**{track.title}** by **{track.author}**"
-        
+        embed: discord.Embed = create_green_embed(
+            title="Now Playing:", 
+        )
+        embed.add_field(name=f"**{track.title}**", value=f"By **{track.author}**")
         if track.artwork:
             embed.set_image(url = track.artwork)
 
@@ -83,18 +84,26 @@ class MusicBot(commands.Cog):
             return
         
         player = cast(wavelink.Player, ctx.voice_client) 
-
         if not player:
             try:
                 player = await ctx.author.voice.channel.connect(cls = wavelink.Player)
             except AttributeError:
-                await ctx.send("Please join a voice channel first before using this command")
+                embed: discord.Embed = create_red_embed(
+                    title="Please join a voice channel first before using this command."
+                )
+                await ctx.send(embed=embed)
                 return
             except discord.ClientException:
-                await ctx.send("I was unable to join this voice channel. Please try again")
+                embed: discord.Embed = create_red_embed(
+                    title="I was unable to join this voice channel. Please try again."
+                )
+                await ctx.send(embed=embed)
                 return
         elif player and ctx.author.voice.channel != player.channel:
-            await ctx.send(f"I can't join other channels while already playing in <#{player.channel.id}>")
+            embed: discord.Embed = create_red_embed(
+                title=f"I can't join other channels while already playing in <#{player.channel.id}>."
+            )
+            await ctx.send(embed=embed)
 
     @commands.command()
     async def play(self, ctx: commands.Context, *, query: str) -> None:
@@ -111,19 +120,33 @@ class MusicBot(commands.Cog):
             # elif player.home != ctx.channel:
             #     await ctx.send(f"You can only play songs in {player.home.mention}, as the Player has already started there")
             #     return
-                        
-            tracks: wavelink.Search = await wavelink.Playable.search(query)
+
+            # Look for spotify tracks first, otherwise use YouTube
+            if "open.spotify.com" in query:
+                tracks: wavelink.Search = await wavelink.Playable.search(query)
+            else:
+                tracks: wavelink.Search = await wavelink.Playable.search(query, source=wavelink.TrackSource.YouTube)
+        
             if not tracks:
-                await ctx.send(f"{ctx.author.mention} - Could not find any tracks with that query")
+                embed: discord.Embed = create_red_embed(
+                    title=f"{ctx.author.mention} - Could not find any tracks with that query."
+                )
+                await ctx.send(embed=embed)
                 return
             
             if isinstance(tracks, wavelink.Playlist):
                 added: int = await player.queue.put_wait(tracks)
-                await ctx.send(f"Added the playlist **{tracks.name}** ({added} songs) to the queue")
+                embed: discord.Embed = create_green_embed(
+                    title=f"Added the playlist **{tracks.name}** ({added} songs) to the queue."
+                )
+                await ctx.send(embed=embed)
             else:
-                track = wavelink.Playable = tracks[0]
+                track: wavelink.Playable = tracks[0]
                 await player.queue.put_wait(track)
-                await ctx.send(f"Added **{track}** by **{track.author}** to the queue")
+                embed: discord.Embed = create_green_embed(
+                    title=f"Added **{track}** by **{track.author}** to the queue."
+                )
+                await ctx.send(embed=embed)
 
             if not player.playing:
                 await player.play(player.queue.get(), volume = 15)
@@ -138,7 +161,10 @@ class MusicBot(commands.Cog):
             return
         
         await player.skip(force = True)
-        await ctx.send(f"Skipped the current track")
+        embed: discord.Embed = create_green_embed(
+            title="Skipped the current track."
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def pause(self, ctx: commands.Context) -> None:
@@ -148,7 +174,10 @@ class MusicBot(commands.Cog):
             return
 
         await player.pause(True)
-        await ctx.send(f"Paused the Player")
+        embed: discord.Embed = create_green_embed(
+            title="Paused the Player."
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def resume(self, ctx: commands.Context) -> None:
@@ -158,7 +187,10 @@ class MusicBot(commands.Cog):
             return
 
         await player.pause(False)
-        await ctx.send(f"Resumed the Player")
+        embed: discord.Embed = create_green_embed(
+            title="Resumed the Player."
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def stop(self, ctx: commands.Context) -> None:
@@ -167,8 +199,13 @@ class MusicBot(commands.Cog):
         if not player:
             return
 
+        await self.clear(ctx)
         await player.stop()
-        await ctx.send(f"Stopped the Player")
+        self.loop_enabled = False
+        embed: discord.Embed = create_green_embed(
+            title="Stopped the Player."
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def leave(self, ctx: commands.Context) -> None:
@@ -178,7 +215,10 @@ class MusicBot(commands.Cog):
             return
         
         await player.disconnect()
-        await ctx.send(f"Left the voice channel")
+        embed: discord.Embed = create_green_embed(
+            title="Left the voice channel."
+        )
+        await ctx.send(embed=embed)
 
     # ==================== Queue Commands ==================== #
 
@@ -186,28 +226,27 @@ class MusicBot(commands.Cog):
     async def queue(self, ctx: commands.Context) -> None:
         """Displays the song queue"""
         player = cast(wavelink.Player, ctx.voice_client)
-
+        
         if not player or not player.queue and not player.playing:
+            embed: discord.Embed = create_red_embed(
+                title="There are no songs in the queue."
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        songs = []
+        if player.playing:
+            songs.append(f"**Now playing:** {player.current.title} by {player.current.author} | Duration: {format_duration(player.current.length)}")
+
+        for track in player.queue:
+            songs.append(f"{track.title} by {track.author} | Duration: {format_duration(track.length)}")
+        
+        if not songs:
             await ctx.send(f"There are no songs in the queue")
             return
-
-        embed = discord.Embed(title = "Current Queue", color = discord.Color.blurple())
-
-        if player.playing:
-            embed.add_field(
-                name = "Now playing",
-                value = f"**{player.current.title}** by {player.current.author} | Duration: {format_duration(player.current.length)}",
-                inline = False
-            )
-
-        for i, track in enumerate(player.queue):
-            embed.add_field(
-                name = f"{i+1}. {track.title}",
-                value = f"By {track.author} | Duration: {format_duration(track.length)}",
-                inline = False
-            )
         
-        await ctx.send(embed = embed)
+        pagination_view = PaginationView(songs, title="Current Queue")
+        await pagination_view.send(ctx)
 
     @commands.command()
     async def loop(self, ctx: commands.Context) -> None:

@@ -12,6 +12,7 @@ def run():
     async def on_ready():
         logger.info(f"User: {bot.user} (ID: {bot.user.id})")
         await bot.load_extension("cogs.music")
+        await bot.load_extension("cogs.playlist_handler")
 
     @bot.event
     async def on_command_error(ctx, error):

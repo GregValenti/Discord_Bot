@@ -8,6 +8,7 @@ logs/
 # Ignore files form 
 basicbot_OLD.py
 cogs/greetings.py
+cogs/music_test.py
 cmds/
 slashcmds/
 __pycache__/
