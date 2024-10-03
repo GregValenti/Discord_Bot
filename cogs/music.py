@@ -221,8 +221,6 @@ class MusicBot(commands.Cog):
         await ctx.send(embed=embed)
 
     # ==================== Queue Commands ==================== #
-    # TODO Add a remove command for the queue
-    # TODO figure something out for better formatting queue
     
     @commands.command()
     async def queue(self, ctx: commands.Context) -> None:
@@ -307,9 +305,35 @@ class MusicBot(commands.Cog):
         await ctx.send(f"The queue has been cleared")
 
     @commands.command()
-    async def remove(self, ctx: commands.Context) -> None:
+    async def remove(self, ctx: commands.Context, *, query: str) -> None:
         """Removes the specified song from the queue"""
-        await ctx.send("work in progress")
+        player: wavelink.Player = cast(wavelink.Player, ctx.voice_client)
+
+        if not player or not player.queue:
+            embed: discord.Embed = create_red_embed(
+            title="The queue is already empty."
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        found_track = None
+        for i, track in enumerate(player.queue):
+            if query.lower() in track.title.lower():
+                found_track = track
+                player.queue.delete(i)
+                break
+        
+        if found_track == None:
+            embed: discord.Embed = create_red_embed(
+                title=f"No track found that matches the query: **{query}**"
+            )
+            await ctx.send(embed=embed)
+            return
+
+        embed: discord.Embed = create_green_embed(
+            title=f"Removed {found_track.title} by {found_track.author} from the queue."
+        )
+        await ctx.send(embed=embed)
 
     # ==================== Miscellaneous Commands ==================== #
 

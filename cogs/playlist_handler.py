@@ -137,7 +137,7 @@ class PlaylistHandler(commands.Cog):
     @playlist.command()
     async def remove(self, ctx: commands.Context, name: str, *, query: str):
         """Remove a song from a specific playlist."""
-        await ctx.send("worn in progress")
+        await ctx.send("work in progress")
         
 async def setup(bot):
     playlist_handler = PlaylistHandler(bot)
