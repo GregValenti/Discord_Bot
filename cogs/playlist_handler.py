@@ -68,11 +68,19 @@ class PlaylistHandler(commands.Cog):
 
         if isinstance(tracks, wavelink.Playlist):
             for track in tracks:
-                playlists[guild_id][name].append(f"{track.title} by {track.author} | Duration: {format_duration(track.length)}")
+                playlists[guild_id][name].append({
+                    "title": track.title,
+                    "description": f"By {track.author} | Duration: {format_duration(track.length)}",
+                    "url": track.uri
+                })
             await ctx.send(f"Added playlist **{tracks.name}** ({len(tracks)} songs) to the playlist **{name}**")
         else:
             track: wavelink.Playable = tracks[0]
-            playlists[guild_id][name].append(f"{track.title} by {track.author} | Duration: {format_duration(track.length)}")
+            playlists[guild_id][name].append({
+                "title": track.title,
+                "description": f"By {track.author} | Duration: {format_duration(track.length)}",
+                "url": track.uri
+            })
             await ctx.send(f"Added **{track.title}** by **{track.author}** to the playlist **{name}**")
 
         # Save the updated playlists
@@ -93,17 +101,15 @@ class PlaylistHandler(commands.Cog):
                 if not hasattr(player, "home"):
                     player.home = ctx.channel
 
-                for query in playlists[guild_id][name]:
+                for track_data in playlists[guild_id][name]:
+                    query = track_data["url"]
                     if "open.spotify.com" in query:
                         tracks: wavelink.Search = await wavelink.Playable.search(query)
                     else:
                         tracks: wavelink.Search = await wavelink.Playable.search(query, source=wavelink.TrackSource.YouTube)
 
-                    if isinstance(tracks, wavelink.Playlist):
-                        added: int = await player.queue.put_wait(tracks) 
-                    else:
-                        track: wavelink.Playable = tracks[0]
-                        await player.queue.put_wait(track)
+                    track: wavelink.Playable = tracks[0]
+                    await player.queue.put_wait(track)
 
                 await ctx.send(f"Playing playlist **{name}**.")
                 if not player.playing:
@@ -119,19 +125,20 @@ class PlaylistHandler(commands.Cog):
         if guild_id in playlists and name in playlists[guild_id]:
             playlist_songs = playlists[guild_id][name]
             if playlist_songs:
-                view = PaginationView(songs=playlist_songs, title=name)
+                titles = [song["title"] for song in playlist_songs]
+                descriptions = [song["description"] for song in playlist_songs]
+                view = PaginationView(playlist_title=name, titles=titles, descriptions=descriptions)
                 await view.send(ctx)
             else:
                 await ctx.send(f"Playlist **{name}** is empty")
         else:
             await ctx.send(f"Playlist **{name}** not found")
             
-
     @playlist.command()
     async def remove(self, ctx: commands.Context, name: str, *, query: str):
         """Remove a song from a specific playlist."""
+        await ctx.send("worn in progress")
         
-
 async def setup(bot):
     playlist_handler = PlaylistHandler(bot)
     await bot.add_cog(playlist_handler)

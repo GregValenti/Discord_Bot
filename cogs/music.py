@@ -221,7 +221,9 @@ class MusicBot(commands.Cog):
         await ctx.send(embed=embed)
 
     # ==================== Queue Commands ==================== #
-
+    # TODO Add a remove command for the queue
+    # TODO figure something out for better formatting queue
+    
     @commands.command()
     async def queue(self, ctx: commands.Context) -> None:
         """Displays the song queue"""
@@ -234,18 +236,21 @@ class MusicBot(commands.Cog):
             await ctx.send(embed=embed)
             return
         
-        songs = []
+        titles = []
+        descriptions = []
         if player.playing:
-            songs.append(f"**Now playing:** {player.current.title} by {player.current.author} | Duration: {format_duration(player.current.length)}")
+            titles.append(f"Now Playing: {player.current.title}")
+            descriptions.append(f"By {player.current.author} | Duration: {format_duration(player.current.length)}")
 
         for track in player.queue:
-            songs.append(f"{track.title} by {track.author} | Duration: {format_duration(track.length)}")
+            titles.append(f"{track.title}")
+            descriptions.append(f"By {track.author} | Duration: {format_duration(track.length)}")
         
-        if not songs:
+        if not titles:
             await ctx.send(f"There are no songs in the queue")
             return
         
-        pagination_view = PaginationView(songs, title="Current Queue")
+        pagination_view = PaginationView(playlist_title="Current Queue", titles=titles, descriptions=descriptions)
         await pagination_view.send(ctx)
 
     @commands.command()
@@ -300,6 +305,11 @@ class MusicBot(commands.Cog):
         
         player.queue.clear()
         await ctx.send(f"The queue has been cleared")
+
+    @commands.command()
+    async def remove(self, ctx: commands.Context) -> None:
+        """Removes the specified song from the queue"""
+        await ctx.send("work in progress")
 
     # ==================== Miscellaneous Commands ==================== #
 

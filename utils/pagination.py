@@ -11,31 +11,33 @@ def format_duration(duration: int) -> str:
     return f"{minutes}:{seconds:02d}"  
 
 class PaginationView(discord.ui.View):
+    player: wavelink.Player
     current_page: int = 1
     separator: int = 10
-    songs: list
-    title: str
-    player: wavelink.Player
+    playlist_title: str
+    titles: list
+    descriptions: list
 
-    def __init__(self, songs: list, title: str):
+    def __init__(self, playlist_title: str, titles: list, descriptions: list):
         super().__init__()
-        self.songs = songs
-        self.title = title
+        self.playlist_title = playlist_title
+        self.titles = titles
+        self.descriptions = descriptions
     
     async def send(self, ctx):
         self.message = await ctx.send(view=self)
-        await self.update_message(self.songs[:self.separator])
+        await self.update_message(self.titles[:self.separator], self.descriptions[:self.separator])
 
-    def create_embed(self, songs) -> discord.Embed:
-        embed = discord.Embed(title=f"**{self.title}:**")
-        for index, song in enumerate(songs, start=1):
-            i = index + 10 * (self.current_page - 1)
-            embed.add_field(name=f"{i}.  {song}", value="", inline=False)
+    def create_embed(self, titles, descriptions) -> discord.Embed:
+        embed = discord.Embed(title=f"{self.playlist_title}:")
+        for index, (title, description) in enumerate(zip(titles, descriptions), start=1):
+            i = index + 10 * (self.current_page - 1) 
+            embed.add_field(name=f"{i}.  {title}", value=f"{description}", inline=False)
         return embed
     
-    async def update_message(self, songs) -> None:
+    async def update_message(self, titles, descriptions) -> None:
         self.update_buttons()
-        await self.message.edit(embed=self.create_embed(songs), view=self)
+        await self.message.edit(embed=self.create_embed(titles, descriptions), view=self)
 
     def update_buttons(self) -> None:
         if self.current_page == 1:
@@ -45,7 +47,7 @@ class PaginationView(discord.ui.View):
             self.first_page_button.disabled = False
             self.prev_button.disabled = False
 
-        if self.current_page == int(len(self.songs) / self.separator) or len(self.songs) <= 10:
+        if self.current_page == int(len(self.titles) / self.separator) or len(self.titles) <= 10:
             self.next_button.disabled = True
             self.last_page_button.disabled = True
         else:
@@ -57,7 +59,7 @@ class PaginationView(discord.ui.View):
         await interaction.response.defer()
         self.current_page = 1
         until_item = self.current_page * self.separator # Number of the final item on the page
-        await self.update_message(self.songs[:until_item])
+        await self.update_message(self.titles[:until_item], self.descriptions[:until_item])
 
     @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -65,7 +67,7 @@ class PaginationView(discord.ui.View):
         self.current_page -= 1
         until_item = self.current_page * self.separator # Number of the final item on the page
         from_item = until_item - self.separator # Number of the first item of the page
-        await self.update_message(self.songs[from_item:until_item])
+        await self.update_message(self.titles[from_item:until_item], self.descriptions[from_item:until_item])
 
     @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -73,15 +75,15 @@ class PaginationView(discord.ui.View):
         self.current_page += 1
         until_item = self.current_page * self.separator # Number of the final item on the page
         from_item = until_item - self.separator # Number of the first item of the page
-        await self.update_message(self.songs[from_item:until_item])
+        await self.update_message(self.titles[from_item:until_item], self.descriptions[from_item:until_item])
 
     @discord.ui.button(label=">|", style=discord.ButtonStyle.primary)
     async def last_page_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer()
-        self.current_page = int(len(self.songs) / self.separator)
+        self.current_page = int(len(self.titles) / self.separator)
         until_item = self.current_page * self.separator # Number of the final item on the page
         from_item = until_item - self.separator # Number of the first item of the page
-        await self.update_message(self.songs[from_item:])
+        await self.update_message(self.titles[from_item:], self.descriptions[from_item:])
 
 def create_green_embed(*, title: str = "", description: str = "") -> discord.Embed:
     embed: discord.Embed = discord.Embed(
