@@ -8,7 +8,7 @@ import wavelink.player
 import settings
 from settings import load_playlists, save_playlists
 from utils.pagination import PaginationView
-from utils.pagination import format_duration
+from utils.pagination import format_duration, create_green_embed, create_red_embed
 
 import discord
 from discord.ext import commands
@@ -46,7 +46,7 @@ class PlaylistHandler(commands.Cog):
     @commands.group()
     async def playlist(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            await ctx.send(f"Use .**playlist add**, **.playlist play**, or **.playlist remove** to manage your playlists.")    
+            await ctx.send(f"Use .**playlist add**, **.playlist play**, **.playlist list** or **.playlist remove** to manage your playlists.")    
 
     @playlist.command()
     async def add(self, ctx: commands.Context, name: str, *, query: str):
@@ -135,9 +135,52 @@ class PlaylistHandler(commands.Cog):
             await ctx.send(f"Playlist **{name}** not found")
             
     @playlist.command()
-    async def remove(self, ctx: commands.Context, name: str, *, query: str):
+    async def remove(self, ctx: commands.Context, name: str, *, song_name: str = None) -> None:
         """Remove a song from a specific playlist."""
-        await ctx.send("work in progress")
+        guild_id = str(ctx.guild.id)
+
+        if guild_id in playlists and name in playlists[guild_id]:
+            
+            # The following code is to remove the entire playlist
+            if song_name is None:
+                playlists[guild_id].pop(name)
+                settings.save_playlists(playlists)
+                embed: discord.Embed = create_green_embed(
+                    title=f"Removed playlist {name}"
+                )
+                await ctx.send(embed=embed)
+                return
+
+            # The following code is to remove a secific song
+            playlist_songs = playlists[guild_id][name]
+            if playlist_songs:
+
+                found_track = None
+                for i, track in enumerate(playlist_songs):
+                    if song_name.lower() in track["title"].lower():
+                        found_track = track
+                        playlist_songs.pop(i)
+                        settings.save_playlists(playlists)
+                        embed: discord.Embed = create_green_embed(
+                            title=f"Removed {found_track['title']} from playlist {name}"
+                        )
+                        await ctx.send(embed=embed) 
+
+                if found_track == None:
+                    embed: discord.Embed = create_red_embed(
+                        title=f"Track {song_name} not found in playlist {name}"
+                    )
+                    await ctx.send(embed=embed)
+            else:
+                embed: discord.Embed = create_red_embed(
+                    title=f"Playlist {name} is empty"
+                )
+                await ctx.send(embed=embed)
+        else:
+            embed: discord.Embed = create_red_embed(
+                title=f"Playlist {name} not found"
+            )
+            await ctx.send(embed=embed)   
         
 async def setup(bot):
     playlist_handler = PlaylistHandler(bot)
