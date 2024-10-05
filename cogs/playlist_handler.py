@@ -7,7 +7,7 @@ import os
 import wavelink.player
 import settings
 from settings import load_playlists, save_playlists
-from utils.pagination import PaginationView
+from utils.pagination import PaginationView, ConfirmationView
 from utils.pagination import format_duration, create_green_embed, create_red_embed
 
 import discord
@@ -143,14 +143,10 @@ class PlaylistHandler(commands.Cog):
             
             # The following code is to remove the entire playlist
             if song_name is None:
-                playlists[guild_id].pop(name)
-                settings.save_playlists(playlists)
-                embed: discord.Embed = create_green_embed(
-                    title=f"Removed playlist {name}"
-                )
-                await ctx.send(embed=embed)
+                view = ConfirmationView(ctx, name, playlists)
+                await view.send(ctx)
                 return
-
+            
             # The following code is to remove a secific song
             playlist_songs = playlists[guild_id][name]
             if playlist_songs:
