@@ -43,7 +43,7 @@ class PaginationView(discord.ui.View):
         await self.update_message(self.titles[:self.separator], self.descriptions[:self.separator])
 
     def create_embed(self, titles, descriptions) -> discord.Embed:
-        embed = discord.Embed(title=f"{self.playlist_title}:")
+        embed = discord.Embed(color=discord.Color.blurple(), title=f"{self.playlist_title}:")
         for index, (title, description) in enumerate(zip(titles, descriptions), start=1):
             i = index + 10 * (self.current_page - 1) 
             embed.add_field(name=f"{i}.  {title}", value=f"{description}", inline=False)
@@ -118,7 +118,8 @@ class ConfirmationView(discord.ui.View):
     async def send(self, ctx: commands.Context) -> None:
         embed = discord.Embed(
             color=discord.Color.dark_green(),
-            title=f"Are you sure you want to permanently delete {self.playlist_title}?"
+            title="",
+            description=f"Are you sure you want to permanently delete **{self.playlist_title}**?"
         )
         self.message = await ctx.send(embed=embed, view=self)
         await self.update_buttons()
@@ -129,13 +130,13 @@ class ConfirmationView(discord.ui.View):
             settings.save_playlists(self.playlists)
 
             embed = create_green_embed(
-                title=f"Playlist {self.playlist_title} has been removed."
+                description=f"Playlist **{self.playlist_title}** has been removed."
             )
             await self.ctx.send(embed=embed)
 
     async def cancel_removal(self):
         embed = create_red_embed(
-            title=f"Canceled the removal of playlist {self.playlist_title}."
+            description=f"Canceled the removal of playlist **{self.playlist_title}**."
         )
         await self.ctx.send(embed=embed)
     
@@ -174,6 +175,6 @@ class ConfirmationView(discord.ui.View):
         await self.message.edit(view=self)
 
         timeout_embed = create_red_embed(
-            title="No interaction detected, disabling buttons...",
+            description="No interaction detected, disabling buttons...",
         )
         await self.ctx.send(embed=timeout_embed)

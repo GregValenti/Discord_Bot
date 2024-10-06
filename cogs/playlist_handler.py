@@ -33,20 +33,32 @@ class PlaylistHandler(commands.Cog):
             try:
                 player = await ctx.author.voice.channel.connect(cls = wavelink.Player)
             except AttributeError:
-                await ctx.send("Please join a voice channel first before using this command")
+                embed: discord.Embed = create_red_embed(
+                    description="Please join a voice channel first before using this command."
+                )
+                await ctx.send(embed=embed)
                 return
             except discord.ClientException:
-                await ctx.send("I was unable to join this voice channel. Please try again")
+                embed: discord.Embed = create_red_embed(
+                    description="I was unable to join this voice channel. Please try again."
+                )
+                await ctx.send(embed=embed)
                 return
         elif player and ctx.author.voice.channel != player.channel:
-            await ctx.send(f"I can't join other channels while already playing in <#{player.channel.id}>")
+            embed: discord.Embed = create_red_embed(
+                description=f"I can't join other channels while already playing in <#{player.channel.id}>."
+            )
+            await ctx.send(embed=embed)
 
     # ==================== Playlists Commands ==================== #
 
     @commands.group()
     async def playlist(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            await ctx.send(f"Use .**playlist add**, **.playlist play**, **.playlist list** or **.playlist remove** to manage your playlists.")    
+            embed: discord.Embed = create_red_embed(
+                description="Use **.playlist help** for informations on available playlist commands."
+            )
+            await ctx.send(embed=embed)
 
     @playlist.command()
     async def add(self, ctx: commands.Context, name: str, *, query: str):
@@ -73,7 +85,10 @@ class PlaylistHandler(commands.Cog):
                     "description": f"By {track.author} | Duration: {format_duration(track.length)}",
                     "url": track.uri
                 })
-            await ctx.send(f"Added playlist **{tracks.name}** ({len(tracks)} songs) to the playlist **{name}**")
+            embed: discord.Embed = create_green_embed(
+                description=f"Added playlist **{tracks.name}** ({len(tracks)} songs) to the playlist **{name}**."
+            )
+            await ctx.send(embed=embed)
         else:
             track: wavelink.Playable = tracks[0]
             playlists[guild_id][name].append({
@@ -81,7 +96,10 @@ class PlaylistHandler(commands.Cog):
                 "description": f"By {track.author} | Duration: {format_duration(track.length)}",
                 "url": track.uri
             })
-            await ctx.send(f"Added **{track.title}** by **{track.author}** to the playlist **{name}**")
+            embed: discord.Embed = create_green_embed(
+                description=f"Added **{track.title}** by **{track.author}** to the playlist **{name}**."
+            )
+            await ctx.send(embed=embed)
 
         # Save the updated playlists
         settings.save_playlists(playlists)
@@ -111,11 +129,17 @@ class PlaylistHandler(commands.Cog):
                     track: wavelink.Playable = tracks[0]
                     await player.queue.put_wait(track)
 
-                await ctx.send(f"Playing playlist **{name}**.")
+                embed: discord.Embed = create_green_embed(
+                    description=f"Playing playlist **{name}**."
+                )
+                await ctx.send(embed=embed)
                 if not player.playing:
                     await player.play(player.queue.get(), volume = 15)
         else:
-            await ctx.send(f"Playlist **{name}** not found.")
+            embed: discord.Embed = create_red_embed(
+                description=f"Playlist **{name}** not found."
+            )
+            await ctx.send(embed=embed)
 
     @playlist.command()
     async def list(self, ctx: commands.Context, name: str) -> None:
@@ -130,9 +154,15 @@ class PlaylistHandler(commands.Cog):
                 view = PaginationView(playlist_title=name, titles=titles, descriptions=descriptions)
                 await view.send(ctx)
             else:
-                await ctx.send(f"Playlist **{name}** is empty")
+                embed: discord.Embed = create_red_embed(
+                    description=f"Playlist **{name}** is empty."
+                )
+                await ctx.send(embed=embed)
         else:
-            await ctx.send(f"Playlist **{name}** not found")
+            embed: discord.Embed = create_red_embed(
+                description=f"Playlist **{name}** not found."
+            )
+            await ctx.send(embed=embed)
             
     @playlist.command()
     async def remove(self, ctx: commands.Context, name: str, *, song_name: str = None) -> None:
@@ -158,23 +188,23 @@ class PlaylistHandler(commands.Cog):
                         playlist_songs.pop(i)
                         settings.save_playlists(playlists)
                         embed: discord.Embed = create_green_embed(
-                            title=f"Removed {found_track['title']} from playlist {name}"
+                            description=f"Removed {found_track['title']} from playlist {name}."
                         )
                         await ctx.send(embed=embed) 
 
                 if found_track == None:
                     embed: discord.Embed = create_red_embed(
-                        title=f"Track {song_name} not found in playlist {name}"
+                        description=f"Track {song_name} not found in playlist {name}."
                     )
                     await ctx.send(embed=embed)
             else:
                 embed: discord.Embed = create_red_embed(
-                    title=f"Playlist {name} is empty"
+                    description=f"Playlist {name} is empty."
                 )
                 await ctx.send(embed=embed)
         else:
             embed: discord.Embed = create_red_embed(
-                title=f"Playlist {name} not found"
+                description=f"Playlist {name} not found."
             )
             await ctx.send(embed=embed)   
         

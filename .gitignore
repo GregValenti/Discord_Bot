@@ -5,6 +5,9 @@
 # Ignore logs folder
 logs/
 
+# Ignore playlists file
+playlists.json
+
 # Ignore files form 
 basicbot_OLD.py
 cogs/greetings.py
